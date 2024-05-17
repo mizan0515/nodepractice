@@ -1,0 +1,14 @@
+doctype html
+html
+  head
+    title 글 목록
+    link(href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet")
+  body(class="bg-gray-100")
+    include navbar.pug
+    .container.mx-auto.max-w-4xl
+      h1(class="text-3xl font-bold underline text-center my-5") 내 글 목록
+      ul
+        each post in posts
+          li(class="max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2")
+            h2(class="text-xl font-bold")= post.title
+            p(class="text-gray-700")= post.content
