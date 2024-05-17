@@ -1,0 +1,25 @@
+{
+  "name": "first",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/mizan0515/nodepractice.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mizan0515/nodepractice/issues"
+  },
+  "homepage": "https://github.com/mizan0515/nodepractice#readme",
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^5.9.2",
+    "nodemon": "^3.1.0",
+    "pug": "^3.0.2"
+  }
+}
