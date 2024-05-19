@@ -3,12 +3,44 @@ html
   head
     title 글 목록
     link(href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet")
+    link(href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet")
   body(class="bg-gray-100")
     include navbar.pug
     .container.mx-auto.max-w-4xl
-      h1(class="text-3xl font-bold underline text-center my-5") 내 글 목록
+      h1(class="text-3xl font-bold text-center my-5") 내 글 목록
       ul
         each post in posts
           li(class="max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2")
-            h2(class="text-xl font-bold")= post.title
-            p(class="text-gray-700")= post.content
+            a(href=`/detail/${post._id}` class="block w-full")
+              .flex.justify-between.items-center.mb-2
+                h2(class="text-xl font-bold")= post.title
+                .dropdown.relative
+                  button(class="text-blue-500 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500", onclick="this.nextElementSibling.classList.toggle('hidden')")
+                    i(class="fas fa-ellipsis-h")
+                  .dropdown-menu.hidden.absolute.right-0.mt-2.w-48.bg-white.border.border-gray-200.rounded.shadow-lg
+                    button(class="dropdown-item block w-full text-left bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-t focus:outline-none focus:shadow-outline", onclick=`deletePost('${post._id}')`) 삭제
+                    button(class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline") 수정
+              p(class="text-gray-700")= post.content
+    script.
+        // 게시글 삭제 함수
+      function deletePost(id) {
+        fetch('/delete-post', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: id })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.toast);
+            window.location.reload();
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+      }
