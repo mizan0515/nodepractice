@@ -123,8 +123,7 @@ app.get ('/edit/:id', async(요청, 응답)=>{
 app.put('/posts/:id', async(요청, 응답) => {
     
     const { title, content } = 요청.body;
-    await db.collection()
-    Post.findByIdAndUpdate(요청.params.id, {
+    db.collection('post').updateOne({_id: new ObjectId(id)}, {
       title: title,
       content: content
     })
