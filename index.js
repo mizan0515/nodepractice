@@ -110,15 +110,28 @@ app.delete('/delete-post', async (요청, 응답) => {
 });
 
 app.get ('/edit/:id', async(요청, 응답)=>{
-    db.collection('post').findOne({_id: new ObjectId(요청.params.id)})
+    await db.collection('post').findOne({_id: new ObjectId(요청.params.id)})
     .then((result)=>{
-        응답.render('edit.pug', {result : result})
+        응답.render('write.pug', {action: `/posts/${요청.params.id}`, post : result, method : 'put'})
     })
     .catch((err)=>{
         console.log(err)
         응답.status(404).send('잘못된 url입니다.')
     })
 })
+
+app.put('/posts/:id', async(요청, 응답) => {
+    
+    const { title, content } = 요청.body;
+    await db.collection()
+    Post.findByIdAndUpdate(요청.params.id, {
+      title: title,
+      content: content
+    })
+      .then(() => 응답.redirect(`/detail/${요청.params.id}`))
+      .catch(err => 응답.status(500).send(err));
+  });
+
 
 app.get('/detail/:id', async(요청, 응답)=>{
     try{
