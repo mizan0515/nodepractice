@@ -15,15 +15,17 @@ html
               .flex.justify-between.items-center.mb-2
                 h2(class="text-xl font-bold")= post.title
                 .dropdown.relative
-                  button(class="text-blue-500 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500", onclick="this.nextElementSibling.classList.toggle('hidden')")
+                  button(type="button" class="text-blue-500 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500", onclick="toggleDropdown(event, this)")
                     i(class="fas fa-ellipsis-h")
                   .dropdown-menu.hidden.absolute.right-0.mt-2.w-48.bg-white.border.border-gray-200.rounded.shadow-lg
-                    button(class="dropdown-item block w-full text-left bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-t focus:outline-none focus:shadow-outline", onclick=`deletePost('${post._id}')`) 삭제
-                    button(class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline") 수정
+                    button(type="button" class="dropdown-item block w-full text-left bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-t focus:outline-none focus:shadow-outline", onclick=`deletePost(event, '${post._id}')`) 삭제
+                    button(type="button" class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline", onclick="event.stopPropagation()") 수정
               p(class="text-gray-700")= post.content
     script.
-        // 게시글 삭제 함수
-      function deletePost(id) {
+      // 게시글 삭제 함수
+      function deletePost(event, id) {
+        event.stopPropagation();
+        event.preventDefault(); // 이벤트 전파 방지 추가
         fetch('/delete-post', {
           method: 'DELETE',
           headers: {
@@ -35,7 +37,7 @@ html
         .then(data => {
           if (data.success) {
             alert(data.toast);
-            window.location.reload();
+            window.location.href = '/list'; // 목록 페이지로 리다이렉트
           } else {
             alert(data.message);
           }
@@ -44,3 +46,32 @@ html
           console.error('Error:', error);
         });
       }
+
+      // 드롭다운 토글 함수
+      function toggleDropdown(event, button) {
+        event.stopPropagation();
+        event.preventDefault(); // 이벤트 전파 방지 추가
+        const dropdownMenu = button.nextElementSibling;
+        dropdownMenu.classList.toggle('hidden');
+        
+        // 다른 드롭다운 메뉴 닫기
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+          if (menu !== dropdownMenu && !menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+          }
+        });
+      }
+
+      // 페이지 클릭 이벤트 리스너 추가
+      document.addEventListener('click', function(event) {
+        document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      });
+
+      // 드롭다운 안의 클릭 이벤트 전파 막기
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.addEventListener('click', function(event) {
+          event.stopPropagation();
+        });
+      });

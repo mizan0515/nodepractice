@@ -1,0 +1,12 @@
+//- views/detail.pug
+extends layout
+
+block content
+  .max-w-2xl.mx-auto.mt-10
+    h1.text-2xl.font-bold.mb-4= result.title
+    p.text-gray-700.mb-4= result.content
+    .flex.space-x-4
+      a(href=`/edit/${result._id}` class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500") Edit
+      form(action='/delete-post' method='post')
+        input(type='hidden' name='id' value=result._id)
+        button(type='submit' class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500") Delete
