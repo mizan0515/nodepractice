@@ -50,10 +50,9 @@ app.get('/beauty',function(요청,응답){
     db.collection
 }); 
 
-app.get('/write',function(요청,응답){
-    응답.render('write.pug')
-
-}); 
+app.get('/write', function(요청, 응답) {
+    응답.render('write.pug', { method: 'post' });
+});
 
 app.get('/list', async (요청, 응답) => {
     let result = await db.collection('post').find().toArray();
@@ -110,8 +109,10 @@ app.delete('/delete-post', async (요청, 응답) => {
 });
 
 app.get ('/edit/:id', async(요청, 응답)=>{
+    console.log(요청.body)
     await db.collection('post').findOne({_id: new ObjectId(요청.params.id)})
     .then((result)=>{
+        console.log(result)
         응답.render('write.pug', {action: `/posts/${요청.params.id}`, post : result, method : 'put'})
     })
     .catch((err)=>{
@@ -135,7 +136,7 @@ app.put('/posts/:id', async(요청, 응답) => {
 app.get('/detail/:id', async(요청, 응답)=>{
     try{
         let result = await db.collection('post').findOne({_id: new ObjectId(요청.params.id)})
-        console.log(요청.params)
+        //console.log(요청.params)
         if(result){
             응답.render('detail.pug', {result : result})  
         }else{
@@ -145,7 +146,5 @@ app.get('/detail/:id', async(요청, 응답)=>{
         console.log(err)
         응답.status(404).send('잘못된 url입니다.')
     }
-    
-
 })
 

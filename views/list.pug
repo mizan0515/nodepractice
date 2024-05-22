@@ -11,7 +11,7 @@ html
       ul
         each post in posts
           li(class="max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2")
-            a(href=`/detail/${post._id}` class="block w-full")
+            a(href=`/detail/${post._id}` class="block w-full", onclick="handleLinkClick(event, '/detail/${post._id}')")
               .flex.justify-between.items-center.mb-2
                 h2(class="text-xl font-bold")= post.title
                 .dropdown.relative
@@ -19,8 +19,7 @@ html
                     i(class="fas fa-ellipsis-h")
                   .dropdown-menu.hidden.absolute.right-0.mt-2.w-48.bg-white.border.border-gray-200.rounded.shadow-lg
                     button(type="button" class="dropdown-item block w-full text-left bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-t focus:outline-none focus:shadow-outline", onclick=`deletePost(event, '${post._id}')`) 삭제
-                    button(type="button" class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline", onclick="event.stopPropagation()") 수정
-              p(class="text-gray-700")= post.content
+                    button(type="button" class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline", onclick=`editPost(event, '${post._id}')`) 수정
     script.
       // 게시글 삭제 함수
       function deletePost(event, id) {
@@ -75,3 +74,15 @@ html
           event.stopPropagation();
         });
       });
+
+      // 링크 클릭 핸들러
+      function handleLinkClick(event, url) {
+        event.preventDefault();
+        window.location.href = url;
+      }
+
+      // 수정 버튼 클릭 핸들러
+      function editPost(event, id) {
+        event.stopPropagation();
+        window.location.href = '/edit/' + id;
+      }
