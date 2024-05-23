@@ -1,10 +1,19 @@
+require('dotenv').config();
+
+
 const express = require ('express');
 
 const app  =  express();
 
+const path = require('path');
+
 const {MongoClient} = require('mongodb');
 
 const { ObjectId } = require('mongodb');
+
+const bodyParser = require('body-parser');
+
+const port = process.env.PORT || 8080;
 
 // JSON 요청 본문을 파싱하기 위한 미들웨어
 app.use(express.json());
@@ -14,6 +23,8 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use(express.static(__dirname + '/public'))
+
+
 
 
 app.set('view engine', 'pug');
@@ -35,20 +46,22 @@ new MongoClient(url).connect().then((client)=>{
 })
 
 
-app.get('/',function(요청,응답){
-    응답.sendFile(__dirname + '/index.html');
-}); 
+app.get('/', (req, res) => {
+    res.render('index', { title: 'Update Post', apiUrl: process.env.API_BASE_URL });
+  });
 
 
 app.get('/write', function(요청, 응답) {
     응답.render('write.pug', { method: 'post' });
 });
 
+
 app.get('/list', async (요청, 응답) => {
     let result = await db.collection('post').find().toArray();
     console.log(result)
     응답.render('list', { posts: result });
 })
+
 
 app.post('/submit-post', async (요청, 응답) => {
     console.log(요청.body)
@@ -114,13 +127,33 @@ app.get ('/edit/:id', async(요청, 응답)=>{
 
 app.put('/posts/:id', async(요청, 응답) => {
     console.log("putstart");
+    const id = 요청.params.id;
     const { title, content } = 요청.body;
-    db.collection('post').updateOne({_id: new ObjectId(id)}, {
-      title: title,
-      content: content
-    })
-      .then(() => 응답.redirect(`/detail/${요청.params.id}`))
-      .catch(err => 응답.status(500).send(err));
+
+    if (!ObjectId.isValid(id)) {
+        return res.status(400).send({
+          success: false,
+          message: '유효하지 않은 ID 형식입니다.',
+          toast: '유효하지 않은 ID 형식입니다.'
+        });
+    }
+
+    try {
+
+        const objectId = new ObjectId(id);
+        console.log(objectId)
+
+        await db.collection('post').updateOne(
+          { _id: objectId },
+          { $set: { title: title, content: content } }
+        );
+
+        res.redirect(`/detail/${id}`);
+
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
   });
 
 
