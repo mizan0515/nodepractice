@@ -10,7 +10,7 @@ html
       h1(class="text-3xl font-bold text-center my-5") 내 글 목록
       ul
         each post in posts
-          li(class="max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2", onclick="handleLinkClick(event, '/detail/${post._id}')")
+          li(class="max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2", onclick=`handleLinkClick(event, '/detail/${post._id}')`)
             .flex.justify-between.items-center.mb-2
               h2(class="text-xl font-bold")= post.title
               .dropdown.relative

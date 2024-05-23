@@ -40,16 +40,6 @@ app.get('/',function(요청,응답){
 }); 
 
 
-app.get('/test',function(요청,응답){
-    응답.send('반갑습니다')
-}); 
-
-
-app.get('/beauty',function(요청,응답){
-    응답.send('뷰티관련 페이지입니다');
-    db.collection
-}); 
-
 app.get('/write', function(요청, 응답) {
     응답.render('write.pug', { method: 'post' });
 });
