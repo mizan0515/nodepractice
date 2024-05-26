@@ -38,16 +38,18 @@ new MongoClient(url).connect().then((client)=>{
   db = client.db('forum')
 
   app.listen(8080, () => {
-    console.log('http://localhost:8080 에서 서버 실행중')
-  })
+    console.log(`${process.env.BASE_URL} 에서 서버 실행중`);
+  });
 
 }).catch((err)=>{
   console.log(err)
 })
 
 
-app.get('/', (req, res) => {
-    res.render('index', { title: 'Update Post', apiUrl: process.env.API_BASE_URL });
+app.get('/', async(req, res) => {
+    let result = await db.collection('post').find().toArray();
+    console.log(result)
+    res.render('list', { posts: result });
   });
 
 
@@ -116,7 +118,7 @@ app.get ('/edit/:id', async(요청, 응답)=>{
         console.log("get started");
         const result = await db.collection('post').findOne({_id: new ObjectId(요청.params.id)});
         console.log("db collection ended" + result);
-        응답.render('write.pug', {url: `/posts/${요청.params.id}`, post: result, method: 'put'});
+        응답.render('write.pug', {url: `/posts/${요청.params.id}`, post: result, method: 'put', baseUrl: process.env.BASE_URL });
         console.log("get ended");
     } catch (err) {
         console.log(err);
@@ -131,7 +133,7 @@ app.put('/posts/:id', async(요청, 응답) => {
     const { title, content } = 요청.body;
 
     if (!ObjectId.isValid(id)) {
-        return res.status(400).send({
+        return 응답.status(400).send({
           success: false,
           message: '유효하지 않은 ID 형식입니다.',
           toast: '유효하지 않은 ID 형식입니다.'
@@ -148,11 +150,11 @@ app.put('/posts/:id', async(요청, 응답) => {
           { $set: { title: title, content: content } }
         );
 
-        res.redirect(`/detail/${id}`);
-
+        응답.status(200).send({ success: true, message: 'Post updated successfully' });
+        
       } catch (err) {
         console.error(err);
-        res.status(500).send(err);
+        응답.status(500).send(err);
       }
   });
 

@@ -1,19 +1,27 @@
 async function updatePost(postId) {
-    const url = `http://localhost:8080/posts/${postId}`;
-    const data = {
-      title: 'Updated Post Title',
-      content: 'Updated content for the post',
-    };
-  
-    try {
-      const response = await axios.put(url, data, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-  
-      console.log('Success:', response.data);
-    } catch (error) {
-      console.error('Error:', error);
+  event.preventDefault()
+  const url = `${baseUrl}/posts/${postId}`;  // baseUrl 사용
+  console.log(url);
+  const data = {
+    title: document.getElementById('title').value,
+    content: document.getElementById('content').value,
+  };
+
+  console.log("js started")  
+  try {
+    const response = await axios.put(url, data, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 200) {
+      console.log("200 status")  
+      window.location.href = `/detail/${postId}`; // 성공적으로 업데이트 후 상세 페이지로 리다이렉트
+    } else {
+      console.error('Update failed:', response.status);
     }
+  } catch (error) {
+    console.error('Error:', error);
   }
+}
