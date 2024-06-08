@@ -54,7 +54,7 @@ interface.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 interface.get('/login', (req, res) => {
     axios.get(`${APP_SERVER_URL}/login`)
         .then(response => {
-            res.render('login', { loginData: response.data });
+            res.render('login.pug', { loginData: response.data });
         })
         .catch(error => {
             console.error('로그인 페이지 로드 실패:', error);
@@ -181,7 +181,6 @@ interface.get('/edit/:id', async (req, res) => {
         res.status(404).send('잘못된 url입니다.');
     }
 });
-
 
 
 

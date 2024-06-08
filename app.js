@@ -3,6 +3,9 @@
 require('dotenv').config();
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
+const { connectToDatabase } = require('./objects/db');
+const User = require('./objects/user');
+
 
 const app = express();
 const port = process.env.APP_PORT || 8081;
@@ -10,9 +13,20 @@ const port = process.env.APP_PORT || 8081;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let db;
+//let db;
 const url = process.env.MONGO_URL;
 
+connectToDatabase().then((database) => {
+    app.locals.db = database; // DB 객체를 Express의 로컬 변수에 저장
+    app.listen(port, () => {
+        console.log(`App server running on port ${port}`);
+    });
+}).catch((err) => {
+    console.error('DB 연결 실패:', err);
+});
+
+
+/*
 new MongoClient(url).connect().then((client) => {
     console.log('DB연결성공');
     db = client.db('forum');
@@ -23,6 +37,7 @@ new MongoClient(url).connect().then((client) => {
 }).catch((err) => {
     console.log(err);
 });
+*/
 
 /*------로그인------*/
 const session = require('express-session');
@@ -41,18 +56,46 @@ app.use(session({
     }
 }));
 
+
+
+
+// ------------사용자 모델------------
+
+
 app.get('/login', (req, res) => {
     res.render('login.pug');
 });
 
+app.post('/login', passport.authenticate('local', {
+    successRedirect: '/',
+    failureRedirect: '/login',
+    failureFlash: true
+  }));
+
+
+
 passport.use(new LocalStrategy(
-    async (username, password, done) => {
-        const user = await db.collection('user').findOne({ username });
-        if (!user) {
-            return done(null, false, { message: '사용자를 찾을 수 없습니다.' });
-        }
-    } 
+async (username, password, done) => {
+    const db = app.locals.db; // db 객체를 app.locals에서 가져옴
+    try {
+    const user = await User.findOne(db, { username: username });
+    if (!user) {
+        return done(null, false, { message: '사용자를 찾을 수 없습니다.' });
+    }
+    const isValidPassword = await User.verifyPassword(user, password);
+    if (!isValidPassword) {
+        return done(null, false, { message: '비밀번호가 일치하지 않습니다.' });
+    }
+    return done(null, user);
+    } catch (err) {
+    console.error(err);
+    return done(err);
+    }
+}
 ));
+
+
+
 
 
 /*------게시물------*/
@@ -60,6 +103,7 @@ passport.use(new LocalStrategy(
 
 // 게시물 새로 작성
 app.get('/posts', async (req, res) => {
+    const db = req.app.locals.db; // db 객체를 req.app.locals에서 가져옴
     try {
         const posts = await db.collection('post').find().toArray();
         res.json(posts);
@@ -73,6 +117,7 @@ app.get('/posts', async (req, res) => {
 
 // 게시물 삭제
 app.delete('/posts/:id', async (req, res) => {
+    const db = req.app.locals.db; // db 객체를 req.app.locals에서 가져옴
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
         res.status(400).send('유효하지 않은 ID 형식입니다.');
@@ -94,6 +139,7 @@ app.delete('/posts/:id', async (req, res) => {
 
 // 게시물 수정
 app.put('/edit/:id', async (req, res) => {
+    const db = req.app.locals.db; // db 객체를 req.app.locals에서 가져옴
     const id = req.params.id;
     const { title, content } = req.body;
     if (!ObjectId.isValid(id)) {
@@ -115,6 +161,7 @@ app.put('/edit/:id', async (req, res) => {
 
 // 상세보기
 app.get('/posts/:id', async (req, res) => {
+    const db = req.app.locals.db; // db 객체를 req.app.locals에서 가져옴
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
         res.status(400).send('유효하지 않은 ID 형식입니다.');
@@ -137,6 +184,7 @@ app.get('/posts/:id', async (req, res) => {
 
 // 목록 출력
 app.get('/api/posts', async (req, res) => {
+    const db = req.app.locals.db; // db 객체를 req.app.locals에서 가져옴
     console.log(req.query);
     const page = parseInt(req.query.page || '0', 10);
     const limit = parseInt(req.query.limit || '10', 10);
