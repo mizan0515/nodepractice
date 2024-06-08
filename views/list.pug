@@ -15,25 +15,44 @@ html
         button(type="button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="fetchPosts(currentPage + 1)") 다음
     script.
       let currentPage = 1;
-      const totalPages = 10;
+      let totalPages = 1;
+      let totalPosts = 0;
 
       document.addEventListener('DOMContentLoaded', function() {
         console.log('문서가 로드되었습니다. 현재 페이지:', currentPage);
-        updatePageButtons();
         fetchPosts(currentPage);
       });
 
       function fetchPosts(page) {
         console.log(`fetchPosts 호출됨. 요청 페이지: ${page}`);
+        
+        // Ensure totalPosts is set correctly
+        if (typeof totalPosts === 'undefined' || typeof currentPage === 'undefined') {
+          console.error('totalPosts 또는 currentPage가 정의되지 않았습니다.');
+          return;
+        }
+
+        // Ensure the requested page is within valid range
         if (page < 1 || page > totalPages) {
+          console.log(`페이지 번호가 유효 범위를 벗어났습니다. 현재 페이지: ${page}, 총 페이지: ${totalPages}`);
           console.error('페이지 번호가 유효 범위를 벗어났습니다.');
           return;
         }
+
         currentPage = page;
         fetch(`/api/posts?page=${currentPage - 1}&limit=10`)
-          .then(response => response.json())
-          .then(posts => {
-            console.log(`${posts.length}개의 게시물을 받았습니다.`);
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('네트워크 응답에 문제가 있습니다.');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log(data.posts);
+            const posts = data.posts || [];
+            totalPosts = data.totalPosts;
+            // Calculate totalPages right after getting totalPosts
+            totalPages = Math.ceil(totalPosts / 10);
             updatePostsList(posts);
             updatePageButtons();
           })
@@ -45,37 +64,78 @@ html
 
       function updatePageButtons() {
         console.log(`updatePageButtons 호출됨. 현재 페이지: ${currentPage}, 총 페이지: ${totalPages}`);
-        const prevButton = document.querySelector('.pagination button:first-child');
-        const nextButton = document.querySelector('.pagination button:last-child');
-        prevButton.disabled = currentPage <= 1;
+        const paginationContainer = document.querySelector('.pagination');
+        paginationContainer.innerHTML = ''; // 기존 버튼들을 초기화
+
+        // 이전 페이지 버튼 생성
+        const prevButton = document.createElement('button');
+        prevButton.type = 'button';
+        prevButton.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded';
+        prevButton.textContent = '이전';
+        prevButton.onclick = function() { fetchPosts(currentPage - 1); };
+        prevButton.disabled = currentPage === 1;
+        paginationContainer.appendChild(prevButton);
+
+        // 페이지 번호 버튼 생성
+        let startPage = currentPage < 5 ? 1 : currentPage - 4;
+        let endPage = currentPage < 5 ? 10 : currentPage + 5;
+        endPage = endPage > totalPages ? totalPages : endPage; // 총 페이지 수를 초과하지 않도록 조정
+
+        for (let i = startPage; i <= endPage; i++) {
+          const pageButton = document.createElement('button');
+          pageButton.type = 'button';
+          pageButton.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded';
+          pageButton.textContent = i;
+          pageButton.onclick = function() { fetchPosts(i); };
+          if (i === currentPage) {
+            pageButton.classList.add('bg-blue-700'); // 현재 페이지 강조
+          }
+          paginationContainer.appendChild(pageButton);
+        }
+
+        // 다음 페이지 버튼 생성
+        const nextButton = document.createElement('button');
+        nextButton.type = 'button';
+        nextButton.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded';
+        nextButton.textContent = '다음';
+        nextButton.onclick = function() { fetchPosts(currentPage + 1); };
         nextButton.disabled = currentPage >= totalPages;
+        paginationContainer.appendChild(nextButton);
       }
 
       function updatePostsList(posts) {
-        console.log(`updatePostsList 호출됨. 게시물 수: ${posts.length}`);
-        const postsList = document.getElementById('postsList');
-        postsList.innerHTML = '';
-        posts.forEach(post => {
-          const li = document.createElement('li');
-          li.className = 'max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2';
-          li.onclick = function() { handleLinkClick(event, `/detail/${post._id}`); };
-          li.innerHTML = `
-            <div class="flex justify-between items-center mb-2">
-              <h2 class="text-xl font-bold">${post.title}</h2>
-              <div class="dropdown relative">
-                <button type="button" class="text-blue-500 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="toggleDropdown(event, this)">
-                  <i class="fas fa-ellipsis-h"></i>
-                </button>
-                <div class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg">
-                  <button type="button" class="dropdown-item block w-full text-left bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-t focus:outline-none focus:shadow-outline" onclick="deletePost(event, '${post._id}')">삭제</button>
-                  <button type="button" class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline" onclick="editPost(event, '${post._id}')">수정</button>
+          if (!Array.isArray(posts)) {
+              console.error('게시물 목록이 유효하지 않습니다.');
+              return;
+          }
+
+          console.log(`updatePostsList 호출됨. 게시물 수: ${posts.length}`);
+          const postsList = document.getElementById('postsList');
+          postsList.innerHTML = '';
+          console.log(posts);
+          posts.forEach(post => {
+            console.log(post);
+            const li = document.createElement('li');
+            li.className = 'max-w-4xl mx-auto p-5 bg-white rounded shadow mb-2';
+            li.onclick = function() { handleLinkClick(event, `/detail/${post._id}`); };
+            li.innerHTML = `
+              <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold">${post.title}</h2>
+                <div class="dropdown relative">
+                  <button type="button" class="text-blue-500 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="toggleDropdown(event, this)">
+                    <i class="fas fa-ellipsis-h"></i>
+                  </button>
+                  <div class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg">
+                    <button type="button" class="dropdown-item block w-full text-left bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-t focus:outline-none focus:shadow-outline" onclick="deletePost(event, '${post._id}')">삭제</button>
+                    <button type="button" class="dropdown-item block w-full text-left bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-b focus:outline-none focus:shadow-outline" onclick="editPost(event, '${post._id}')">수정</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          `;
-          postsList.appendChild(li);
-        });
+            `;
+            postsList.appendChild(li);
+          });
       }
+
       function nextPage() {
         if (currentPage < totalPages) {
           fetchPosts(currentPage + 1);

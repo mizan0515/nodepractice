@@ -1,6 +1,6 @@
 async function updatePost(postId) {
   event.preventDefault()
-  const url = `${baseUrl}/posts/${postId}`;  // baseUrl 사용
+  const url = `${baseUrl}/api/edit/${postId}`;  // baseUrl 사용
   console.log(url);
   const data = {
     title: document.getElementById('title').value,

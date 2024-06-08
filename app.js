@@ -24,6 +24,41 @@ new MongoClient(url).connect().then((client) => {
     console.log(err);
 });
 
+/*------로그인------*/
+const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+
+app.use(passport.initialize());
+app.use(session({
+    secret: 'wdzaxse2:.-,/3',
+    resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
+    saveUninitialized: false, // 로그인을 안해도 세션을 만들건지
+    cookie: {
+        maxAge: 1000 * 60 * 10, // 쿠키 유효 기간 10분
+        httpOnly: true, // 자바스크립트의 Document.cookie API를 통해서만 쿠키에 접근할 수 있도록 제한
+        secure: false // 쿠키를 HTTPS 연결을 통해서만 전송할 수 있도록 제한
+    }
+}));
+
+app.get('/login', (req, res) => {
+    res.render('login.pug');
+});
+
+passport.use(new LocalStrategy(
+    async (username, password, done) => {
+        const user = await db.collection('user').findOne({ username });
+        if (!user) {
+            return done(null, false, { message: '사용자를 찾을 수 없습니다.' });
+        }
+    } 
+));
+
+
+/*------게시물------*/
+
+
+// 게시물 새로 작성
 app.get('/posts', async (req, res) => {
     try {
         const posts = await db.collection('post').find().toArray();
@@ -34,21 +69,9 @@ app.get('/posts', async (req, res) => {
     }
 });
 
-app.post('/posts', async (req, res) => {
-    const { title, content } = req.body;
-    if (!title || title.trim() === '') {
-        res.status(400).send('제목을 입력해주세요.');
-        return;
-    }
-    try {
-        await db.collection('post').insertOne({ title, content });
-        res.status(201).send('Post created successfully');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error creating post');
-    }
-});
 
+
+// 게시물 삭제
 app.delete('/posts/:id', async (req, res) => {
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
@@ -68,7 +91,9 @@ app.delete('/posts/:id', async (req, res) => {
     }
 });
 
-app.put('/posts/:id', async (req, res) => {
+
+// 게시물 수정
+app.put('/edit/:id', async (req, res) => {
     const id = req.params.id;
     const { title, content } = req.body;
     if (!ObjectId.isValid(id)) {
@@ -87,6 +112,8 @@ app.put('/posts/:id', async (req, res) => {
     }
 });
 
+
+// 상세보기
 app.get('/posts/:id', async (req, res) => {
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
@@ -107,16 +134,28 @@ app.get('/posts/:id', async (req, res) => {
 });
 
 
+
+// 목록 출력
 app.get('/api/posts', async (req, res) => {
-    console.log(req.query)
-    const page = parseInt(req.query.page || '0');
-    const limit = parseInt(req.query.limit || '10');
+    console.log(req.query);
+    const page = parseInt(req.query.page || '0', 10);
+    const limit = parseInt(req.query.limit || '10', 10);
+
+    if (isNaN(page) || isNaN(limit) || page < 0 || limit <= 0) {
+        return res.status(400).send('유효하지 않은 페이지 또는 제한 값입니다.');
+    }
 
     console.log(`Received request for page: ${page}, with limit: ${limit}`); // 요청받은 페이지와 제한 수 로깅
 
-    const posts = await db.collection('post').find().skip(page * limit).limit(limit).toArray();
+    try {
+        const totalPosts = await db.collection('post').countDocuments(); // 총 게시물 수 계산
+        const posts = await db.collection('post').find().skip(page * limit).limit(limit).toArray();
 
-    console.log(`Returning ${posts.length} posts`); // 반환되는 게시물 수 로깅
+        console.log(`Returning ${posts.length} posts out of total ${totalPosts}`); // 반환되는 게시물 수와 총 게시물 수 로깅
 
-    res.json(posts);
+        res.json({ totalPosts, posts });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('게시물을 검색하는 중 오류가 발생했습니다.');
+    }
 });
