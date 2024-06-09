@@ -15,7 +15,7 @@ const router = express.Router();
 
 router.use(passport.initialize());
 router.use(session({
-    secret: 'wdzaxse2:.-,/3',
+    secret: process.env.MONGO_SECRET,
     resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
     saveUninitialized: false, // 로그인을 안해도 세션을 만들건지
     cookie: {
