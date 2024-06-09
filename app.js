@@ -2,9 +2,10 @@
 
 require('dotenv').config();
 const express = require('express');
-const { MongoClient, ObjectId } = require('mongodb');
+const { ObjectId } = require('mongodb');
 const { connectToDatabase } = require('./objects/db');
 const User = require('./objects/user');
+const authRoutes = require('./auth'); // auth.js 모듈 임포트
 
 
 const app = express();
@@ -12,9 +13,11 @@ const port = process.env.APP_PORT || 8081;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/auth', authRoutes); // auth 라우터 사용
 
-//let db;
-const url = process.env.MONGO_URL;
+
+
+
 
 connectToDatabase().then((database) => {
     app.locals.db = database; // DB 객체를 Express의 로컬 변수에 저장
@@ -26,73 +29,7 @@ connectToDatabase().then((database) => {
 });
 
 
-/*
-new MongoClient(url).connect().then((client) => {
-    console.log('DB연결성공');
-    db = client.db('forum');
 
-    app.listen(port, () => {
-        console.log(`App server running on port ${port}`);
-    });
-}).catch((err) => {
-    console.log(err);
-});
-*/
-
-/*------로그인------*/
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-
-app.use(passport.initialize());
-app.use(session({
-    secret: 'wdzaxse2:.-,/3',
-    resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
-    saveUninitialized: false, // 로그인을 안해도 세션을 만들건지
-    cookie: {
-        maxAge: 1000 * 60 * 10, // 쿠키 유효 기간 10분
-        httpOnly: true, // 자바스크립트의 Document.cookie API를 통해서만 쿠키에 접근할 수 있도록 제한
-        secure: false // 쿠키를 HTTPS 연결을 통해서만 전송할 수 있도록 제한
-    }
-}));
-
-
-
-
-// ------------사용자 모델------------
-
-
-app.get('/login', (req, res) => {
-    res.render('login.pug');
-});
-
-app.post('/login', passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/login',
-    failureFlash: true
-  }));
-
-
-
-passport.use(new LocalStrategy(
-async (username, password, done) => {
-    const db = app.locals.db; // db 객체를 app.locals에서 가져옴
-    try {
-    const user = await User.findOne(db, { username: username });
-    if (!user) {
-        return done(null, false, { message: '사용자를 찾을 수 없습니다.' });
-    }
-    const isValidPassword = await User.verifyPassword(user, password);
-    if (!isValidPassword) {
-        return done(null, false, { message: '비밀번호가 일치하지 않습니다.' });
-    }
-    return done(null, user);
-    } catch (err) {
-    console.error(err);
-    return done(err);
-    }
-}
-));
 
 
 

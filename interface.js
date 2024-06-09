@@ -52,9 +52,9 @@ interface.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
  *         description: Server error
  */
 interface.get('/login', (req, res) => {
-    axios.get(`${APP_SERVER_URL}/login`)
+    axios.get(`${APP_SERVER_URL}/auth/login`)
         .then(response => {
-            res.render('login.pug', { loginData: response.data });
+            res.render('login', { data: response.data });
         })
         .catch(error => {
             console.error('로그인 페이지 로드 실패:', error);
