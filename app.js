@@ -17,8 +17,6 @@ app.use('/auth', authRoutes); // auth 라우터 사용
 
 
 
-
-
 connectToDatabase().then((database) => {
     app.locals.db = database; // DB 객체를 Express의 로컬 변수에 저장
     app.listen(port, () => {
@@ -30,7 +28,7 @@ connectToDatabase().then((database) => {
 
 
 
-
+module.exports = { connectToDatabase };
 
 
 

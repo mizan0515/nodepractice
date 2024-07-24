@@ -11,9 +11,26 @@ const bodyParser = require('body-parser');
 const express = require('express');
 
 const router = express.Router();
+const MongoStore = require('connect-mongo');
 
+const loadUser = async (req, res, next) => {
+    if (req.user && !req.user.fullProfile) {
+        try {
+            const db = req.app.locals.db;
+            const fullUser = await db.collection('user').findOne({ _id: new ObjectId(req.user.id) });
+            if (fullUser) {
+                delete fullUser.password;
+                req.user.fullProfile = fullUser;
+            }
+        } catch (err) {
+            console.error('사용자 정보 로드 중 오류:', err);
+        }
+    }
+    next();
+};
 
 router.use(passport.initialize());
+
 router.use(session({
     secret: process.env.MONGO_SECRET,
     resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
@@ -22,7 +39,12 @@ router.use(session({
         maxAge: 1000 * 60 * 10, // 쿠키 유효 기간 10분
         httpOnly: true, // 자바스크립트의 Document.cookie API를 통해서만 쿠키에 접근할 수 있도록 제한
         secure: true // 쿠키를 HTTPS 연결을 통해서만 전송할 수 있도록 제한
-    }
+    },
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGO_URL,
+        dbName: 'forum',
+        collectionName: 'sessions'
+    })
 }));
 
 
@@ -31,7 +53,7 @@ router.use(session({
 // ------------사용자 모델------------
 
 
-router.get('/login', (req, res) => {
+router.get('/login', loadUser, (req, res) => {
     res.render('login.pug');
 });
 
@@ -46,7 +68,7 @@ router.get('/register', (요청, 응답)=>{
 })
 
 
-  passport.use(new LocalStrategy(
+passport.use(new LocalStrategy(
     async (username, password, done) => {
         const db = req.app.locals.db;
         try {
@@ -73,6 +95,14 @@ passport.serializeUser((user, done) => {
     })
   })
 
+passport.deserializeUser((user, done) => {
+    process.nextTick(() => {
+        // 최소한의 정보만 저장
+        return done(null, { id: user.id, username: user.username });
+    });
+});
+
+/*
 passport.deserializeUser(async (user, done) => {
     let result = await db.collection('user').findOne({_id : new ObjectId(user.id) })
     delete result.password
@@ -80,6 +110,10 @@ passport.deserializeUser(async (user, done) => {
         return done(null, result)
     })
 })
+*/
+
+
+
 
 
 module.exports = router;
