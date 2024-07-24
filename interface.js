@@ -54,8 +54,6 @@ const bcrypt = require('bcrypt');
 const User = require('./objects/user');
 const bodyParser = require('body-parser');
 
-
-const router = express.Router();
 const MongoStore = require('connect-mongo');
 
 const loadUser = async (req, res, next) => {
@@ -102,17 +100,17 @@ interface.use((req, res, next) => {
 // ------------사용자 모델------------
 
 
-router.get('/login', loadUser, (req, res) => {
+interface.get('/login', loadUser, (req, res) => {
     res.render('login.pug');
 });
 
-router.post('/login', passport.authenticate('local', {
+interface.post('/login', passport.authenticate('local', {
     successRedirect: '/',
     failureRedirect: '/login',
     failureFlash: true
   }));
 
-router.get('/register', (요청, 응답)=>{
+interface.get('/register', (요청, 응답)=>{
 응답.render('register.pug')
 })
 
@@ -165,7 +163,7 @@ passport.deserializeUser(async (user, done) => {
 
 
 
-module.exports = router;
+module.exports = interface;
 
 /*------------------------게시물 작성------------------------*/
 
