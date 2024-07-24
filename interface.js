@@ -53,7 +53,7 @@ const AppleStrategy = require('passport-apple');
 const bcrypt = require('bcrypt');
 const User = require('./objects/user');
 const bodyParser = require('body-parser');
-const express = require('express');
+
 
 const router = express.Router();
 const MongoStore = require('connect-mongo');
@@ -74,9 +74,9 @@ const loadUser = async (req, res, next) => {
     next();
 };
 
-router.use(passport.initialize());
+interface.use(passport.initialize());
 
-router.use(session({
+interface.use(session({
     secret: process.env.MONGO_SECRET,
     resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
     saveUninitialized: false, // 로그인을 안해도 세션을 만들건지
@@ -92,7 +92,11 @@ router.use(session({
     })
 }));
 
-
+interface.use((req, res, next) => {
+    res.locals.session = req.session;
+    res.locals.user = req.user;
+    next();
+  });
 
 
 // ------------사용자 모델------------
