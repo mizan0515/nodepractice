@@ -41,6 +41,9 @@ router.post('/login', passport.authenticate('local', {
     failureFlash: true
   }));
 
+router.get('/register', (요청, 응답)=>{
+응답.render('register.pug')
+})
 
 
   passport.use(new LocalStrategy(
@@ -63,6 +66,20 @@ router.post('/login', passport.authenticate('local', {
     }
 ));
 
+
+passport.serializeUser((user, done) => {
+    process.nextTick(() => {
+      done(null, { id: user._id, username: user.username })
+    })
+  })
+
+passport.deserializeUser(async (user, done) => {
+    let result = await db.collection('user').findOne({_id : new ObjectId(user.id) })
+    delete result.password
+    process.nextTick(() => {
+        return done(null, result)
+    })
+})
 
 
 module.exports = router;
