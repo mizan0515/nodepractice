@@ -1,0 +1,137 @@
+doctype html
+html
+  head
+    title 회원가입
+    link(href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet")
+    style.
+      .hidden-rule {
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+      }
+      .visible-rule {
+        display: block;
+        opacity: 1;
+      }
+  body(class="bg-gray-100")
+    include navbar.pug
+    .container.mx-auto.max-w-xl
+      h1(class="text-3xl font-bold text-center my-5") 회원가입
+      .bg-white.p-10.rounded-lg.shadow-lg
+        form(action="/register" method="post" class="space-y-6")
+          .mb-4
+            label(for="username" class="block text-lg font-semibold text-gray-700 mb-2") ID
+            input#username(type="text" name="username" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="사용자 이름을 입력하세요" required)
+          .mb-4
+            label(for="password" class="block text-lg font-semibold text-gray-700 mb-2") PW
+            input#password(type="password" name="password" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="비밀번호를 입력하세요" required)
+            div#password-rule.text-sm.text-gray-600.mt-2.hidden-rule
+              p 비밀번호는 최소 8자 이상이어야 하며,
+              p 대문자, 소문자, 숫자를 포함해야 합니다.
+          .mb-4
+            label(for="confirm_password" class="block text-lg font-semibold text-gray-700 mb-2") PW 재확인
+            input#confirm_password(type="password" name="confirm_password" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="비밀번호를 다시 입력하세요" required)
+            div#password-mismatch.text-sm.text-red-500.mt-2.hidden-rule
+              p 비밀번호가 일치하지 않습니다.
+          .mb-4
+            button#signup-button(type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 ease-in-out opacity-50 cursor-not-allowed" disabled) 회원가입
+
+    script.
+      // DOM 요소 선택
+      const passwordInput = document.getElementById('password');
+      const confirmPasswordInput = document.getElementById('confirm_password');
+      const passwordRule = document.getElementById('password-rule');
+      const passwordMismatch = document.getElementById('password-mismatch');
+      const signupButton = document.getElementById('signup-button');
+
+      // 비밀번호 유효성 검사 및 일치 여부 확인 함수
+      function validatePassword() {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        // 비밀번호 규칙 검사
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const isLongEnough = password.length >= 8;
+
+        // 비밀번호 규칙 텍스트 표시 여부 결정
+        if (password.length > 0) {
+          passwordRule.classList.remove('hidden-rule');
+          passwordRule.classList.add('visible-rule');
+        } else {
+          passwordRule.classList.remove('visible-rule');
+          passwordRule.classList.add('hidden-rule');
+        }
+
+        // 비밀번호 규칙 충족 여부에 따른 색상 변경
+        if (hasUpperCase && hasLowerCase && hasNumbers && isLongEnough) {
+          passwordRule.classList.remove('text-red-500');
+          passwordRule.classList.add('text-green-500');
+        } else {
+          passwordRule.classList.remove('text-green-500');
+          passwordRule.classList.add('text-red-500');
+        }
+
+        // 비밀번호 일치 여부 확인 및 회원가입 버튼 상태 변경
+        if (confirmPassword.length > 0) {
+          if (password === confirmPassword) {
+            // 비밀번호 일치 시
+            passwordMismatch.classList.remove('visible-rule');
+            passwordMismatch.classList.add('hidden-rule');
+          } else {
+            // 비밀번호 불일치 시
+            passwordMismatch.classList.remove('hidden-rule');
+            passwordMismatch.classList.add('visible-rule');
+          }
+        } else {
+          // 비밀번호 확인란이 비어있을 때
+          passwordMismatch.classList.remove('visible-rule');
+          passwordMismatch.classList.add('hidden-rule');
+        }
+
+        // 모든 조건 충족 시 회원가입 버튼 활성화
+        if (hasUpperCase && hasLowerCase && hasNumbers && isLongEnough && password === confirmPassword && password.length > 0) {
+          signupButton.disabled = false;
+          signupButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+          signupButton.disabled = true;
+          signupButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+      }
+
+      // 이벤트 리스너 등록
+      passwordInput.addEventListener('input', validatePassword);
+      confirmPasswordInput.addEventListener('input', validatePassword);
+
+      // 폼 제출 이벤트 리스너 등록
+      document.querySelector('form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {
+          username: formData.get('username'),
+          password: formData.get('password'),
+          confirm_password: formData.get('confirm_password')
+        };
+
+        try {
+          const response = await fetch('/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+
+          if (response.ok) {
+            window.location.href = '/login';
+          } else {
+            const result = await response.json();
+            alert(result.error || '회원가입 중 오류가 발생했습니다.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('회원가입 중 오류가 발생했습니다.');
+        }
+      });

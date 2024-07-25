@@ -1,3 +1,18 @@
+
+const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const AppleStrategy = require('passport-apple');
+const bcrypt = require('bcrypt');
+const User = require('./objects/user');
+const bodyParser = require('body-parser');
+
+const MongoStore = require('connect-mongo');
+
+
+
+
 // interface.js
 
 require('dotenv').config();
@@ -6,10 +21,50 @@ const path = require('path');
 const axios = require('axios');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-require('./auth');
+//require('./auth');
 
 const interface = express();
 const port = process.env.INTERFACE_PORT || 8080;
+
+interface.use(session({
+    secret: process.env.MONGO_SECRET,
+    resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
+    saveUninitialized: false, // 로그인을 안해도 세션을 만들건지
+    cookie: {
+        maxAge: 1000 * 60 * 10, // 쿠키 유효 기간 10분
+        httpOnly: false // 자바스크립트의 Document.cookie API를 통해서만 쿠키에 접근할 수 있도록 제한
+        //secure: true // 쿠키를 HTTPS 연결을 통해서만 전송할 수 있도록 제한
+    },
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGO_URL,
+        dbName: 'forum',
+        //collectionName: 'sessions'
+    })
+}));
+
+interface.use((req, res, next) => {
+    if (req.session && req.sessionID) {
+        // 세션 ID를 쿠키에 설정
+        res.cookie('SessionId', req.sessionID, {
+            maxAge: 1000 * 60 * 60 * 24, // 1일
+            httpOnly: false, // JavaScript에서 접근 가능하도록 설정
+            // secure: true, // HTTPS에서만 사용하려면 이 옵션을 활성화
+            // sameSite: 'strict' // CSRF 방지를 위해 필요하다면 이 옵션을 사용
+        });
+        console.log('세션 ID를 쿠키에 설정:', req.sessionID);
+    }
+    next();
+});
+
+function checkLogin( 요청, 응답, next) {
+    if (!요청.user);
+    {
+        응답.render('login.pug')
+    }
+    next();
+}
+
+interface.use(checkLogin)
 
 interface.use(express.json());
 interface.use(express.urlencoded({ extended: true }));
@@ -45,16 +100,6 @@ interface.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /*----------------로그인-----------------*/
 
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const AppleStrategy = require('passport-apple');
-const bcrypt = require('bcrypt');
-const User = require('./objects/user');
-const bodyParser = require('body-parser');
-
-const MongoStore = require('connect-mongo');
 
 const loadUser = async (req, res, next) => {
     if (req.user && !req.user.fullProfile) {
@@ -74,21 +119,16 @@ const loadUser = async (req, res, next) => {
 
 interface.use(passport.initialize());
 
-interface.use(session({
-    secret: process.env.MONGO_SECRET,
-    resave: false, //유저가 서버로 요청할 때마다 세션 갱신할건지
-    saveUninitialized: false, // 로그인을 안해도 세션을 만들건지
-    cookie: {
-        maxAge: 1000 * 60 * 10, // 쿠키 유효 기간 10분
-        httpOnly: true, // 자바스크립트의 Document.cookie API를 통해서만 쿠키에 접근할 수 있도록 제한
-        secure: true // 쿠키를 HTTPS 연결을 통해서만 전송할 수 있도록 제한
-    },
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGO_URL,
-        dbName: 'forum',
-        collectionName: 'sessions'
-    })
-}));
+interface.use((req, res, next) => {
+    console.log('세션 ID:', req.sessionID);
+    console.log('세션:', req.session);
+    next();
+});
+
+
+
+
+
 
 interface.use((req, res, next) => {
     res.locals.session = req.session;
@@ -101,6 +141,9 @@ interface.use((req, res, next) => {
 
 
 interface.get('/login', loadUser, (req, res) => {
+    if (req.session.user) {
+        return res.redirect('/');
+    }
     res.render('login.pug');
 });
 
@@ -108,7 +151,10 @@ interface.post('/login', passport.authenticate('local', {
     successRedirect: '/',
     failureRedirect: '/login',
     failureFlash: true
-  }));
+}), (req, res) => {
+    console.log('로그인 성공, 세션 ID:', req.sessionID);
+    console.log('세션 데이터:', req.session);
+});
 
 interface.get('/register', (요청, 응답)=>{
 응답.render('register.pug')
@@ -117,8 +163,8 @@ interface.get('/register', (요청, 응답)=>{
 
 passport.use(new LocalStrategy(
     async (username, password, done) => {
-        const db = req.app.locals.db;
         try {
+            const db = await connectToDatabase();
             const user = await User.findOne(db, { username: username });
             if (!user) {
                 return done(null, false, { message: '사용자를 찾을 수 없습니다.' });
@@ -149,18 +195,47 @@ passport.deserializeUser((user, done) => {
     });
 });
 
-/*
-passport.deserializeUser(async (user, done) => {
-    let result = await db.collection('user').findOne({_id : new ObjectId(user.id) })
-    delete result.password
-    process.nextTick(() => {
-        return done(null, result)
-    })
-})
-*/
 
+/*------------------------회원 가입-----------------------*/
 
+const User_ = require('./objects/user');
+const { connectToDatabase } = require('./objects/db');
 
+interface.post('/register', async (req, res) => {
+    const { username, password, confirm_password } = req.body;
+
+    // 비밀번호와 비밀번호 확인이 일치하는지 확인
+    if (password !== confirm_password) {
+        return res.status(400).render('register.pug', { error: '비밀번호가 일치하지 않습니다.' });
+    }
+
+    // 비밀번호 유효성 검사
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const isLongEnough = password.length >= 8;
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers || !isLongEnough) {
+        return res.status(400).render('register.pug', { error: '비밀번호는 최소 8자 이상이어야 하며, 대문자, 소문자, 숫자를 포함해야 합니다.' });
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const existingUser = await User_.findOne(db, { username: username });
+
+        if (existingUser) {
+            return res.status(400).render('register.pug', { error: '이미 존재하는 사용자 이름입니다.' });
+        }
+
+        // 사용자 생성
+        await User_.createUser(db, username, password);
+
+        res.redirect('/login');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('서버 오류가 발생했습니다.');
+    }
+});
 
 
 module.exports = interface;
@@ -178,7 +253,7 @@ module.exports = interface;
  *       500:
  *         description: 게시물 리스트 출력 실패
  */
-interface.get('/', async (req, res, next) => {
+interface.get('/',loadUser, async (req, res, next) => {
     if (!req.session.userLoaded) {
         req.session.userLoaded = true;
         return loadUser(req, res, next);
@@ -203,7 +278,7 @@ interface.get('/', async (req, res, next) => {
  *       200:
  *         description: 게시물 작성 페이지 출력
  */
-interface.get('/write', (req, res) => {
+interface.get('/write',loadUser, (req, res) => {
     res.render('write.pug', { method: 'post' });
 });
 
@@ -218,7 +293,7 @@ interface.get('/write', (req, res) => {
  *       500:
  *         description: 게시물 리스트 출력 실패
  */
-interface.get('/list', async (req, res) => {
+interface.get('/list', loadUser, async (req, res) => {
     try {
         const response = await axios.get(`${APP_SERVER_URL}/posts`);
         res.render('list', { posts: response.data });
@@ -250,13 +325,25 @@ interface.get('/list', async (req, res) => {
  *       500:
  *         description: 게시물 작성 실패
  */
-interface.post('/submit-post', async (req, res) => {
+interface.post('/submit-post',loadUser, async (req, res) => {
     try {
         await axios.post(`${APP_SERVER_URL}/posts`, req.body);
         res.redirect('/list');
     } catch (err) {
         console.error(err);
         res.status(500).send('Error creating post');
+    }
+});
+
+
+interface.get('/test-session', (req, res) => {
+    if (req.session) {
+        req.session.views = (req.session.views || 0) + 1;
+        console.log(`세션 ID: ${req.session.id}, 접속 횟수: ${req.session.views}`);
+        res.send(`이 페이지에 ${req.session.views}번 접속했습니다.`);
+    } else {
+        console.log('세션이 설정되지 않았습니다.');
+        res.send('세션이 설정되지 않았습니다.');
     }
 });
 
@@ -278,7 +365,7 @@ interface.post('/submit-post', async (req, res) => {
  *       404:
  *         description: 잘못된 URL
  */
-interface.get('/edit/:id', async (req, res) => {
+interface.get('/edit/:id',loadUser, async (req, res) => {
     try {
         const response = await axios.get(`${APP_SERVER_URL}/posts/${req.params.id}`);
         res.render('write.pug', { 

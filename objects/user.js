@@ -16,6 +16,17 @@ const User = {
       console.error('Error verifying password:', err);
       throw err;
     }
+  },
+  createUser: async (db, username, password) => {
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10); // 비밀번호 해싱
+      const newUser = { username, password: hashedPassword };
+      await db.collection('user').insertOne(newUser);
+      return newUser;
+    } catch (err) {
+      console.error('Error creating user:', err);
+      throw err;
+    }
   }
 };
 
